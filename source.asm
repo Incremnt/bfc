@@ -1,13 +1,13 @@
 ;--- brainfuck compiler for Linux x86_64 by Denis Bazhenov ---;
 format ELF64 executable
 entry _start
-
-
-segment readable executable
-macro syscall_1 num, arg1 {
-mov rdi, arg1
-mov rax, num
-syscall
+                                                               
+                                                                                   
+segment readable executable                                                        
+macro syscall_1 num, arg1 {                                                        
+mov rdi, arg1                                                                      
+mov rax, num                                                                       
+syscall                                                                           
 }
 
 macro syscall_3 num, arg1, arg2, arg3 {
@@ -20,7 +20,9 @@ syscall
 _start:
 mov rbx, [rsp + 16]
 syscall_3 2, rbx, 0, 0
-syscall_3 0, rax, code, 20000
+mov rbx, rax
+syscall_3 0, rbx, code, 20000
+syscall_1 3, rbx
 mov rbx, [rsp + 24]
 syscall_3 2, rbx, 1, 0x1ed
 mov rbx, rax
@@ -47,53 +49,86 @@ jmp mainloop
 
 
 plus:
-mov [gen_code + r15], plus_opcode
+mov rsi, plus_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, PO_size
+rep movsb
 add r15, PO_size
 jmp skip
 
 minus:
-mov [gen_code + r15], minus_opcode
+mov rsi, plus_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, MO_size
+rep movsb
 add r15, MO_size
 jmp skip
 
 next:
-mov [gen_code + r15], next_opcode
+mov rsi, plus_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, NO_size
+rep movsb
 add r15, NO_size
 jmp skip
 
 back:
-mov [gen_code + r15], back_opcode
+mov rsi, back_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, BO_size
+rep movsb
 add r15, BO_size
 jmp skip
 
 char_in:
-mov [gen_code + r15], input_opcode
+mov rsi, input_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, IO_size
+rep movsb
 add r15, IO_size
 jmp skip
 
 char_out:
-mov [gen_code + r15], output_opcode
+mov rsi, output_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, OO_size
+rep movsb
 add r15, OO_size
 jmp skip
 
 loop_start:
-mov [gen_code + r15], startloop_opcode
+mov rsi, startloop_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, SO_size
+rep movsb
 add r15, SO_size
 jmp skip
 
 loop_end:
-mov [gen_code + r15], endloop_opcode
+mov rsi, endloop_opcode
+mov rdi, gen_code
+add rdi, r15
+mov rcx, EO_size
+rep movsb
 add r15, EO_size
 jmp skip
 
 
 exit:
-add r15, 102
-mov dword [filesz], r15d
-mov dword [memsz], r15d
 syscall_3 1, rbx, headers, 84
 mov r13, gen_code
-mov [gen_code + r15], exit_opcode
+mov rsi, exit_opcode
+mov rdi, r13
+add rdi, r15
+mov rcx, 9
+rep movsb
 add r15, 10
 syscall_3 1, rbx, r13, r15
 syscall_1 60, 0
@@ -104,11 +139,11 @@ jump_table dq 256 dup(skip)
 code db 20000 dup(0)
 
 plus_opcode:
-inc byte [0x08049000+ebx]
+inc byte [0x08048800+ebx]
 PO_size = $ - plus_opcode
 
 minus_opcode:
-dec byte [0x08049000+ebx]
+dec byte [0x08048800+ebx]
 MO_size = $ - minus_opcode
 
 next_opcode:
@@ -122,7 +157,7 @@ BO_size = $ - back_opcode
 input_opcode:
 mov eax, 3
 mov ebx, 0
-mov ecx, 0x08049000
+mov ecx, 0x08048800
 add ecx, ebx
 mov edx, 1
 int 0x80
@@ -131,7 +166,7 @@ IO_size = $ - input_opcode
 output_opcode:
 mov eax, 4
 mov ebx, 1
-mov ecx, 0x08049000
+mov ecx, 0x08048800
 add ecx, ebx
 mov edx, 1
 int 0x80
@@ -161,34 +196,25 @@ db 7 dup(0)
 dw 0x0002
 dw 0x0003
 dd 0x00000001
-dd 0x08049000
+dd 0x08048000
 dd 0x00000034
 dd 0x00000000
 dd 0x00000000
 dw 0x0034
 dw 0x0020
-dw 0x0002
+dw 0x0001
 dw 0x0000
 dw 0x0000
 dw 0x0000
 
 dd 0x00000001
-dd 0x00000000
+dd 0x00000034
 dd 0x08048000
 dd 0x08048000
-dd 0x00000064
-dd 0x00000064
-dd 0x00000003
+dd 0x00000864
+dd 0x00000864
+dd 0x00000007
 dd 0x00001000
+
+gen_code db 2048 dup(0x90)
 arr db 100 dup(0)
-
-dd 0x00000001
-dd 0x00000084
-dd 0x08049000
-dd 0x08049000
-filesz dd 0
-memsz dd 0
-dd 0x00000005
-dd 0x00001000
-
-gen_code db 0x90 dup(65536)
